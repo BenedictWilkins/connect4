@@ -9,6 +9,8 @@ __author__ = "Benedict Wilkins"
 __email__ = "benrjw@gmail.com"
 __status__ = "Development"
 
+import pygame # for a rendered/playable version of the game
+import pygame.gfxdraw
 import gym
 import numpy as np
 
@@ -48,15 +50,16 @@ class Connect4(gym.Env):
         assert self.action_space.is_valid(self.state, action) # NO MORE ACTIONS? THE GAME IS OVER! (SANITY CHECK)
         
         self.state[self.index[action], action] = self.turn
-        self.done, reward = False, 0
+        self.done, reward = False, (0,0)
 
         if self.action_space.mask(self.state).sum() == 0: # DRAW
-            self.done, reward = True, 0
+            self.done, reward = True, (0,0)
         elif self.check_done(self.index[action], action): # WIN!
-            self.done, reward = True, 1
+            self.done, reward = True, (self.turn, -self.turn) # + 1 for winning, -1 for loosing
 
         self.index[action] -= 1
         self.turn = - self.turn
+        print(self.state, self.index)
         return self.state, reward, self.done
 
     def check_done(self, i, j):
@@ -79,11 +82,67 @@ class Connect4(gym.Env):
     def reset(self):
         self.state = np.zeros((self.n, self.n), dtype=np.float32) # n x n grid
         self.index = np.zeros(self.n, dtype=np.uint8)  + self.n - 1 # record of placement positions
+        self.turn = 1 
+        self.done = False
         return self.state 
 
+class Connect4Vis(Connect4):
+
+    def __init__(self, *args, display_size=(640,480), background_colour=(27, 100, 241)):
+        super(Connect4Vis, self).__init__(*args)
+
+        pygame.init()
+
+        self.background_colour = background_colour
+        self.colours = [(251, 216, 72), (255,255,255), (230, 76, 74)]
+        self.display = pygame.display.set_mode(display_size)
+        self.rendering = True
+        self.render()
+
+    def render(self, delay=1000):
+        if self.rendering: 
+            
+            self.display.fill(self.background_colour)
+
+            # draw the game board
+            w, h = pygame.display.get_surface().get_size()
+            r =  (min(w,h) - 10) / (2 * (self.n + 1))
+            inc = (min(w,h) - 10) / (self.n)
+
+            hindent = (w - (inc * self.n)) / 2
+            vindent = (h - (inc * self.n)) / 2
+
+            for i in range(self.n):
+                for j in range(self.n):
+                    c = self.colours[int(self.state[j,i]) + 1]
+                    self.fill_circle((hindent + inc/2 + i * inc, vindent + inc/2 + j * inc), r, colour=c)
+
+            pygame.display.update()
+            self.wait(delay=delay)
+            self.rendering = not self.should_quit()
+
+        return self.rendering
+
+    def should_quit(self):
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.display.quit()
+                pygame.quit()
+                return True
+        return False
+
+    def wait(self, delay=1000):
+        pygame.time.wait(delay)        
+
+    def draw_circle(self, position, radius, colour=(255,255,255)):
+        pygame.gfxdraw.aacircle(self.display, int(position[0]), int(position[1]), int(radius), colour)
+    
+    def fill_circle(self, position, radius, colour=(255,255,255)):
+        pygame.gfxdraw.filled_circle(self.display, int(position[0]), int(position[1]), int(radius), colour)
+        pygame.gfxdraw.aacircle(self.display, int(position[0]), int(position[1]), int(radius), colour)
 
 if __name__ == "__main__":
-    env = Connect4()
+    env = Connect4Vis()
     state = env.reset()
     done = False
     print(state)
@@ -91,6 +150,7 @@ if __name__ == "__main__":
         print("---------------")
         action = env.action_space.sample(state)
         state, reward, done, *_ = env.step(action)
+        env.render()
         
         print("ACTION:", action, done)
         print(state)

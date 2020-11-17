@@ -11,7 +11,7 @@ __status__ = "Development"
 
 import gym
 
-env = gym.make("Connect4-v0")
+env = gym.make("Connect4-v1")
 
 state = env.reset()
 done = False
@@ -23,3 +23,7 @@ while not done:
     
     print("ACTION:", action, done)
     print(state)
+    env.render(delay=200)
+
+while not env.should_quit():
+    env.wait(delay=200)

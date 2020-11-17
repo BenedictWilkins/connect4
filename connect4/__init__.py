@@ -16,6 +16,7 @@ from . import envs
 __all__ = ('envs',)
 
 register(id='Connect4-v0', entry_point='connect4.envs:Connect4')
+register(id='Connect4-v1', entry_point='connect4.envs:Connect4Vis')
 
 if __name__ == "__main__":
 
